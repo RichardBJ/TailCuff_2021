@@ -6,4 +6,3 @@ It allows you to copy CODA raw data to the Windows clipboard.
 (3) ControlBeatsm then calls FindingBeats2.m  That outputs the HRV powers; gather in the main folder.
 
 
-
