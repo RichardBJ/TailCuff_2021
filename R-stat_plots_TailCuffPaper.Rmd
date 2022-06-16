@@ -1,0 +1,340 @@
+---
+title: "Tailcuff plots and statistics"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r loads, include=FALSE}
+# Libraries
+library(ggplot2)
+library(dplyr)
+library(forcats)
+library(hrbrthemes)
+library(viridis)
+library(readxl)
+library(RANN) 
+library(caret)
+library(fields)
+```
+
+#HR PLOT IN PAPER
+
+```{R R_BOXPLOT2, echo=FALSE}
+# Libraries
+library(ggplot2)
+library(dplyr)
+library(forcats)
+library(hrbrthemes)
+library(viridis)
+library(readxl)
+cn<-c('temp','hr','cond')
+data<-read_excel('rawhretal.xlsx', sheet = "Summary",col_names = cn)
+
+data<-subset(data, temp>30 & temp<37)
+
+data$temp<-as.character(data$temp)
+data$cond <- as.factor(data$cond)
+data$temp <- as.factor(data$temp)
+
+dodge <- position_dodge(width = 0.7)
+
+ggplot(data = data, aes(x = temp, y = hr, fill = cond)) +
+  geom_boxplot(position = dodge, alpha=1,width=0.8,outlier.alpha=0,coef=1)+
+  #scale_fill_viridis(discrete=T, name="") +
+  scale_fill_manual(values=c('white','red'))+
+    #theme_ipsum() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(),
+  axis.line = element_blank(),text = element_text(size = 20))+
+  geom_segment(aes(y=300,yend=600,x=-Inf,xend=-Inf))+
+        #axis.line = element_line(colour = "black"))+
+    xlab("Ambient Temperature (C)") +
+    ylab("HR (bpm)")
+
+
+ggsave("HR_box.png",dpi=300)
+```
+
+##lme on HR
+Careful and note similar nlme package lme
+and lme4 package lmer
+```{r HR_STATS, echo=FALSE}
+data<-read_excel('rawhretal.xlsx', sheet = "SummaryNew",col_names=TRUE)
+data<-subset(data,T>30 & T<37)
+data$ID <- factor(data$ID)
+data$V <- factor(data$V)
+data$Cond <- factor(data$Cond)
+
+library(nlme)
+nlmeModel = lme(HR ~ Cond*T,random= list(ID=~1, V=~1), data)
+anova(nlmeModel)
+
+```
+
+
+## Moving on  to BP
+```{r BP-CON-drug, echo=FALSE}
+library(readxl)
+
+data<-read_excel('rawbpetal.xlsx', sheet = "MINITAB4_BP_COMBINED",col_names = TRUE)
+data<-subset(data,T>30 & T<37)
+data$ID <- factor(data$ID)
+data$V <- factor(data$V)
+
+#reorder the groups so vehicle first
+data$Cond <- factor(data$Cond,
+    levels = c('Con','GSK'),ordered = TRUE)
+```
+```{R plotboxtempBP-grouped, echo=FALSE}
+# Libraries
+library(ggplot2)
+library(dplyr)
+library(forcats)
+library(hrbrthemes)
+library(viridis)
+dodge <- position_dodge(width = 0.7)
+
+ggplot(data = data, aes(x = as.factor(T), y = MAP, fill = Cond)) +
+  geom_boxplot(position = dodge, alpha=1,width=0.8,outlier.alpha=0,coef=1)+
+  #scale_fill_viridis(discrete=T, name="") +
+    scale_fill_manual(values=c("white", "red"))+
+      theme(panel.grid.major = element_blank(), 
+            panel.grid.minor = element_blank(),
+            panel.background = element_blank(),
+            legend.key=element_blank(),
+            axis.line = element_blank(),text = element_text(size = 20))+
+            geom_segment(aes(y=40,yend=120,x=-Inf,xend=-Inf))+
+    xlab("Ambient Temperature (C)") +
+    ylab("MAP (mmHg)")+ylim(40,120)
+ggsave("BP_box.png",dpi=300)
+```
+
+##lme on BP
+```{r BP_STATS, echo=FALSE}
+library(readxl)
+data<-read_excel('rawbpetal.xlsx', sheet = "MINITAB4_BP_COMBINED",col_names = TRUE)
+data<-subset(data,T>30 & T<37)
+data$ID <- factor(data$ID)
+data$V <- factor(data$V)
+data$Cond <- factor(data$Cond)
+
+library(nlme)
+
+nlmeModel = lme(MAP ~ Cond*T,random= list(ID=~1, V=~1), data)
+anova(nlmeModel)
+
+```
+
+## Moving onto FLOW
+```{r flow-CON-drug, echo=FALSE}
+library(readxl)
+
+data<-read_excel('rawbpetal.xlsx', sheet = "FULL_FLOW_GATHERED",col_names =TRUE)
+data<-subset(data, T>30 & T<37)
+data$ID <- factor(data$ID)
+data$V <- factor(data$V)
+#reorder the groups so vehicle first
+data$Cond <- factor(data$Cond,
+    levels = c('Con','GSK'),ordered = TRUE)
+```
+```{R plot tempflow-grouped-boxplot, echo=FALSE}
+# Libraries
+library(ggplot2)
+library(dplyr)
+library(forcats)
+library(hrbrthemes)
+library(viridis)
+
+my_comparisons <- list( c(0, 1))
+dodge <- position_dodge(width =0.7)
+ggplot(data = data, aes(x = as.factor(T), y = Flow, fill = Cond)) +
+  geom_boxplot(position = dodge, alpha=1,width=0.8,outlier.alpha=0,coef=1)+
+  #scale_fill_viridis(discrete=T, name="") +
+  scale_fill_manual(values=c("white", "red"))+
+  ylim(0,25)+
+      theme(panel.grid.major = element_blank(), 
+            panel.grid.minor = element_blank(),
+            panel.background = element_blank(),
+            legend.key=element_blank(),
+            axis.line = element_blank(),text = element_text(size = 20))+
+            geom_segment(aes(y=0,yend=25,x=-Inf,xend=-Inf))+
+    xlab("Ambient Temperature (C)") +
+    ylab("Flow (uL/min)")
+#stat_compare_means(label =  "p.signif", label.x = 1.5)
+ #   + stat_compare_means(label.y = 8.5, label.x = 2.5, method = "kruskal.test" ) # Add global p-value / method = kruskal.test or anova
+
+ggsave("Flow_box.png",dpi=300)
+```
+##lme on Flow
+```{r FLOW_STATS, echo=FALSE}
+library(readxl)
+data<-read_excel('rawbpetal.xlsx', sheet = "FULL_FLOW_GATHERED",col_names=TRUE)
+data<-subset(data,T>30 & T<37)
+data$ID <- factor(data$ID)
+data$V <- factor(data$V)
+data$Cond <- factor(data$Cond)
+nans<-which(is.na(data$ID))
+print(data$V[nans])
+
+library(nlme)
+#This not necessary, when one factor is categorical
+data$T.c <- data$T-mean(data$T)
+
+nlmeModel = lme(Flow ~ Cond*T,random= list(ID=~1, V=~1,Sed=~1), data)
+anova(nlmeModel)
+
+```
+##Control HRV frequency domain
+```{r cHRV, echo=FALSE}
+library(readxl)
+
+data<-read_excel('rawhretal.xlsx', sheet = "cHRVsummary",col_names = FALSE)[,1:11]
+
+toprow<-data[1,]
+
+data<-subset(data, data[,1]>=30)
+data<-rbind(toprow,data)
+
+x<-t(data[1,2:ncol(data)])
+
+y<-t(data[2:nrow(data),1])
+
+long<-list()
+count=1
+for (i in 1:length(x)){
+  for (j in 1:length(y)){
+    long[count] <- x[i]
+    count=count+1
+  #print(c(i,j,x[i]))
+  if (is.na(x[i])){
+    break}
+  }
+}
+isNA <- is.na(long)
+found<-any(is.na(long))
+long<-unlist(long)
+lat<-rep(y,length(x))
+power<- unlist(data[2:nrow(data),2:ncol(data)], use.names = F)
+#to check I have these correct print a dataframe
+df=as.data.frame(cbind(long,lat,power))
+
+grid<-as.data.frame(cbind(long,lat))
+test<-list(x=grid,y=power)
+library(fields)
+out1<- Tps(test$x,test$y)
+marks=c(0.00016,0.00018, 0.00020,0.00022, 0.00024, 0.00026)
+marks<-format(marks, scientific = TRUE)
+surface(out1,xlab='Freq (Hz)',ylab = 'Temp (C)',zlab="Power",labcex = 1.5,
+        axis.args=list(cex.axis=1, at=marks, labels=marks),
+        cex.lab=1.5,cex.axis=1.5)
+png(filename = "con_powers.png")
+surface(out1,xlab='Freq (Hz)',ylab = 'Temp (C)',zlab="Power",labcex = 1.5,
+        axis.args=list(cex.axis=1, at=marks, labels=marks),
+        cex.lab=1.5,cex.axis=1.5)
+dev.off()
+```
+##Treatment HRV frequency domain
+```{r tHRV, echo=FALSE}
+library(readxl)
+
+data<-read_excel('rawhretal.xlsx', sheet = "tHRVsummary",col_names = FALSE)[,1:11]
+toprow<-data[1,]
+
+data<-subset(data, data[,1]<=38 & data[,1]>20)
+data<-rbind(toprow,data)
+
+x<-t(data[1,2:ncol(data)])
+
+y<-t(data[2:nrow(data),1])
+
+long<-list()
+count=1
+for (i in 1:length(x)){
+  for (j in 1:length(y)){
+    long[count] <- x[i]
+    count=count+1
+  #print(c(i,j,x[i]))
+  if (is.na(x[i])){
+    break}
+  }
+}
+isNA <- is.na(long)
+found<-any(is.na(long))
+long<-unlist(long)
+lat<-rep(y,length(x))
+power<- unlist(data[2:nrow(data),2:ncol(data)], use.names = F)
+#to check I have these correct print a dataframe
+df=as.data.frame(cbind(long,lat,power))
+
+grid<-as.data.frame(cbind(long,lat))
+test<-list(x=grid,y=power)
+
+out1<- Tps(test$x,test$y)
+marks=c(4e-5,6e-5,8e-5,1e-4,1.2e-4)
+surface(out1,xlab='Freq (Hz)',ylab = 'Temp (C)',zlab="Power",labcex = 1.5,
+        axis.args=list(cex.axis=1, at=marks, labels=marks),
+        cex.lab=1.5,cex.axis=1.5)
+png(filename = "GSK_powers.png")
+surface(out1,xlab='Freq (Hz)',ylab = 'Temp (C)',zlab="Power",labcex = 1.5,
+        axis.args=list(cex.axis=1, at=marks, labels=marks),
+        cex.lab=1.5,cex.axis=1.5)
+dev.off()
+```
+
+```{r simulations, echo=FALSE}
+library(readxl)
+library(fields)
+
+data<-read_excel('allpowers1.xlsx', sheet = "allpowers1",col_names = FALSE)[,1:21]
+
+cnames<-data[1,]
+rnames<-data[2:nrow(data),1]
+data<-data[2:nrow(data),2:ncol(data)]
+data<-t(data)
+data <- scale(data)+0.5 #Standardizing the columns like in MAtlab, but also increasing so not around zero, but 0.5
+data<-t(data)
+
+data<-cbind(rnames,data)
+length(cnames)
+ncol(data)
+data<-rbind(cnames,data)
+
+x<-t(data[1,2:ncol(data)])
+
+y<-t(data[2:nrow(data),1])
+
+long<-list()
+count=1
+for (i in 1:length(x)){
+  for (j in 1:length(y)){
+    long[count] <- x[i]
+    count=count+1
+  if (is.na(x[i])){
+    break}
+  }
+}
+isNA <- is.na(long)
+found<-any(is.na(long))
+long<-unlist(long)
+lat<-rep(y,length(x))
+power<- unlist(data[2:nrow(data),2:ncol(data)], use.names = F)
+#to check I have these correct print a dataframe
+df=as.data.frame(cbind(long,lat,power))
+
+grid<-as.data.frame(cbind(long,lat))
+test<-list(x=grid,y=power)
+
+out1<- Tps(test$x,test$y)
+surface(out1,xlab='Freq (Hz)',ylab = 'Duration of ECG (s)',zlab="Power",labcex = 1.5,axis.args=list(cex.axis=1.5),cex.lab=1.5,cex.axis=1.5)
+png(filename = "sim_duration.png")
+surface(out1,xlab='Freq (Hz)',ylab = 'Duration of ECG (s)',zlab="Power",labcex = 1.5,axis.args=list(cex.axis=1.5),cex.lab=1.5,cex.axis=1.5)
+dev.off()
+
+```
+
